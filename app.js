@@ -696,20 +696,24 @@ function renderUpload(el) {
       showToast(`Você pode enviar no máximo ${max} fotos no total.`, "err");
       return;
     }
+    const loadingEl = document.getElementById("loading-msg");
+    if (loadingEl) loadingEl.classList.remove("hidden");
     for (const f of files) {
       if (!f.type.startsWith("image/")) { showToast("Apenas imagens são aceitas.", "err"); continue; }
       if (f.size > 8 * 1024 * 1024) { showToast(`${f.name} é maior que 8MB.`, "err"); continue; }
-      // Usa FileReader em vez de createObjectURL para compatibilidade com iOS/iPhone
+      // Comprime ANTES de salvar o preview — economiza RAM em celulares antigos
+      const compressed = await compressImage(f, 800, 0.7);
       await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
-          stagedFiles.push({ id: uid(), file: f, previewUrl: e.target.result, title: f.name.replace(/\.[^.]+$/, "") });
+          stagedFiles.push({ id: uid(), file: compressed, previewUrl: e.target.result, title: f.name.replace(/\.[^.]+$/, "") });
           resolve();
         };
         reader.onerror = resolve;
-        reader.readAsDataURL(f);
+        reader.readAsDataURL(compressed);
       });
     }
+    if (loadingEl) loadingEl.classList.add("hidden");
     draw();
   }
 
